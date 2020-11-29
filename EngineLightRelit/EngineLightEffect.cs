@@ -54,9 +54,9 @@ namespace EngineLightRelit
 		/* CAUTION - don't modify these fields at runtime and expect much to happen */
 		// on start many of these are used to initialise internal Color structs and then never read again
 
-		[KSPField] public float lightPower = 1.0f; //LightSource power (gets a percentage based on thrust)
+		[KSPField] public float lightPower = 1.0f;
 
-		[KSPField] public float lightRange = 9f; // modified, down from 40 to 9
+		[KSPField] public float lightRange = 9f;
 
 		[KSPField] public float exhaustRed = 1.0f;
 
@@ -64,7 +64,7 @@ namespace EngineLightRelit
 
 		[KSPField] public float exhaustBlue = 0.68f;
 
-		[KSPField] public float jitterMultiplier = 0.1f; // modified, down from 10 to 0.1
+		[KSPField] public float jitterMultiplier = 0.1f;
 
 		[KSPField] public float multiplierOnIva = 0.5f;
 		
@@ -158,6 +158,11 @@ namespace EngineLightRelit
 			gameObject2.transform.position = position;
 			gameObject2.transform.Translate( new Vector3( 0, 0, exhaustOffsetZ + (this.lightRange * 0.25f) ), Space.Self );
 
+#if DEBUG
+			Utils.Log( gameObject1.transform.position.ToString() );
+			Utils.Log( gameObject2.transform.position.ToString() );
+#endif
+
 			return new Tuple<Light, Light>( light1, light2 );
 		}
 
@@ -207,7 +212,7 @@ namespace EngineLightRelit
 				Utils.Log( "Light calculations (" + this.part.name + ") resulted in: " + lightPower );
 				Utils.Log( "coords of engine: " + engine.transform.position );
 #else
-	Utils.log("Detected and activating for engine: (" + this.part.name + ")");
+	Utils.Log("Detected and activating for engine: (" + this.part.name + ")");
 #endif
 			}
 			catch( Exception exception )

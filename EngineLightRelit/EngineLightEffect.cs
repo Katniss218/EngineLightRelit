@@ -30,63 +30,75 @@ using UnityEngine;
 
 namespace EngineLightRelit
 {
+	/// <summary>
+	/// The main class.
+	/// </summary>
 	public class EngineLightEffect : PartModule
 	{
-		public const float LIGHT_CURVE = -0.0000004f;
-		public const float LIGHT_LINEAR = 0.0068f;
-		public const float LIGHT_MINIMUM = 0.1304f;
-
 		public const float NOZZLE_LIGHT_RANGE_MULTIPLIER = 0.75f;
 		public const float AREA_LIGHT_RANGE_MULTIPLIER = 1.25f;
 		public const float NOZZLE_LIGHT_INTENSITY_MULTIPLIER = 1.15f;
 		public const float AREA_LIGHT_INTENSITY_MULTIPLIER = 1f;
 
-		// Variables:
+		public const float IVA_MULTIPLIER = 0.5f;
 
-		/* CAUTION - don't modify these fields at runtime and expect much to happen */
-		// on start many of these are used to initialise internal Color structs and then never read again
 
-		[KSPField] public float lightPower = 1.0f;
+		/// <summary>
+		/// Controls the base intensity of the lights. Automatically accounts for multiple nozzles.
+		/// </summary>
+		[KSPField] public float lightIntensity = 1.0f;
 
-		[KSPField] public float lightRange = 9f;
+		/// <summary>
+		/// Controls the maximum range of the light.
+		/// </summary>
+		[KSPField] public float lightRange = 30.0f;
 
-		[KSPField] public float plumeLength = 20f;
+		/// <summary>
+		/// Controls the offset of the "area" light.
+		/// </summary>
+		[KSPField] public float plumeLength = 20.0f;
 
-		[KSPField] public float exhaustRed = 1.0f;
+		/// <summary>
+		/// Controls the color of the lights.
+		/// </summary>
+		[KSPField] public float exhaustR = 1.0f;
+		[KSPField] public float exhaustG = 0.88f;
+		[KSPField] public float exhaustB = 0.68f;
 
-		[KSPField] public float exhaustGreen = 0.88f;
-
-		[KSPField] public float exhaustBlue = 0.68f;
-
+		/// <summary>
+		/// Controls how much the light flickers.
+		/// </summary>
 		[KSPField] public float jitterMultiplier = 0.1f;
 
-		[KSPField] public float multiplierOnIva = 0.5f;
-		
-		// allow manual tweaking of the light location
-		[KSPField] public float exhaustOffsetZ = 0;
-		
-		[KSPField] public float lightFadeCoefficient = 0.8f; // keep less than 1	
 
+		/// <summary>
+		/// Controls the offset along the thrust axis.
+		/// </summary>
+		[KSPField] public float exhaustOffsetZ = 0.0f;
 
-		protected bool initOccurred = false; // this is a bit icky - but it's just for debugging
+		/// <summary>
+		/// Keep less than 1.
+		/// </summary>
+		[KSPField] public float lightFadeCoefficient = 0.8f;
 
+		// This is a bit icky - but it's just for debugging.
+		//protected bool initOccurred = false;
+
+		/// </summary>
+		/// Light Stacks are a group of lights, one per each nozzle. Each nozzle can have multiple lights.
+		/// </summary>
 		protected Tuple<Light, Light>[] lightStacks = null;
 
-		protected LightStates lightState = LightStates.Disabled;
-		protected LightStates lastFrameLightState = LightStates.Disabled;
 
 		EngineModuleWrapper engine;
-
 		JitterBuffer jitterBuffer;
-		
 		Color exhaustColor;
-		
-		double lastReportTime = 0;
-		float jitteredThrottle = 0;
-		float lastFrameThrottle = 0;
-		float multiTransformIntensityMult = 1f;
+		float jitteredThrottle;
+		float lastFrameThrottle;
+		float multiTransformIntensityMult;
+		double lastReportTime;
 
-		private float GetIntensityMult( int thrustTransformCount )
+		private static float GetIntensityMult( int thrustTransformCount )
 		{
 			if( thrustTransformCount <= 1 )
 			{
@@ -118,7 +130,6 @@ namespace EngineLightRelit
 			// spawn 2 lights, one point (top) and one spot (top-ish, pointing down)
 
 			// light1 - nozzle light
-			// this exists so the light is stretched vertically, and it also illuminates the rocket better.
 			
 			GameObject gameObject1 = new GameObject( "_EngineLight_Nozzle" );
 
@@ -142,8 +153,6 @@ namespace EngineLightRelit
 
 			Light light2 = gameObject2.AddComponent<Light>();
 			light2.enabled = false;
-			light2.shadows = LightShadows.Hard;
-			light2.shadowStrength = 1;
 
 			// Light Settings
 			light2.type = LightType.Point;
@@ -171,22 +180,12 @@ namespace EngineLightRelit
 				// wrap the parts engine module(s) and FX modules for simpler calls later	        
 				this.engine = new EngineModuleWrapper( this.part );
 				
-				this.exhaustColor = new Color( this.exhaustRed, this.exhaustGreen, this.exhaustBlue );
+				this.exhaustColor = new Color( this.exhaustR, this.exhaustG, this.exhaustB );
 
 				jitterBuffer = new JitterBuffer();
 
-				// cache function call
 				float maxThrust = engine.GetMaxThrust();
 
-				// calculate light power from engine max thrust - follows a quadratic:
-				//this.lightPower = ((LIGHT_CURVE * maxThrust * maxThrust)
-				//			+ (LIGHT_LINEAR * maxThrust)
-				//			+ LIGHT_MINIMUM)
-				//			* this.lightPower; // use the multiplier read from config file
-
-
-
-				//Make lights: (Using part position)
 
 				List<Tuple<Vector3, Vector3>> thrustTransforms = this.engine.GetThrustTransforms();
 
@@ -199,9 +198,9 @@ namespace EngineLightRelit
 					this.lightStacks[i] = lights;
 				}
 
-				this.multiTransformIntensityMult = this.GetIntensityMult( thrustTransforms.Count );
+				this.multiTransformIntensityMult = GetIntensityMult( thrustTransforms.Count );
 
-				this.initOccurred = true;
+				//this.initOccurred = true;
 
 
 
@@ -222,32 +221,24 @@ namespace EngineLightRelit
 
 		public void Start() // doesn't get called for reverting to launch??
 		{
-			if( !HighLogic.LoadedSceneIsFlight || this.initOccurred )
+			/*if( !HighLogic.LoadedSceneIsFlight || this.initOccurred )
 			{
 				return; //Beware the bugs!
-			}
-
-#if DEBUG
-			Utils.Log( "Initialized part (" + this.part.partName + ") Proceeding to patch!" );
-#endif
+			}*/
 
 			InitEngineLights(); // allows manual init / re-init of module, probably
-
 		}
 
-		public void FixedUpdate()
+		public void Update()
 		{
 			if( !HighLogic.LoadedSceneIsFlight )
 			{
 				return;
 			}
-			if( !this.initOccurred )
+			/*if( !this.initOccurred ) // TODO! remove later.
 			{
-#if DEBUG
-				Utils.Log( "FixedUpdate() called before Start() - wtf even?" ); // lul
-#endif
 				return;
-			}
+			}*/
 
 			try
 			{
@@ -273,16 +264,9 @@ namespace EngineLightRelit
 					throttle = this.lastFrameThrottle * this.lightFadeCoefficient;
 				}
 
-				// d'awww, it's a wee finite state machine!
-				this.lightState = LightStates.Disabled;
-				if( throttle > 0 )
-				{
-					this.lightState = this.lightState | LightStates.Exhaust;
-				}
-
 				for( int i = 0; i < this.lightStacks.Length; i++ )
 				{
-					if( MapView.MapIsEnabled || (isIVA && this.multiplierOnIva < 0.1f) || this.lightStacks[i].Item1.intensity < 0.1 || this.lightStacks[i].Item2.intensity < 0.1 )
+					if( MapView.MapIsEnabled || (isIVA && IVA_MULTIPLIER < 0.1f) || this.lightStacks[i].Item1.intensity < 0.1 || this.lightStacks[i].Item2.intensity < 0.1 )
 					{
 						this.lightStacks[i].Item1.enabled = false;
 						this.lightStacks[i].Item2.enabled = false;
@@ -293,26 +277,16 @@ namespace EngineLightRelit
 						this.lightStacks[i].Item2.enabled = true;
 					}
 
-					switch( this.lightState )
+					this.lightStacks[i].Item1.color = this.exhaustColor; // when restarting an engine
+					this.lightStacks[i].Item2.color = this.exhaustColor; // when restarting an engine
+					this.SetIntensityFromExhaust( throttle, i );
+
+					if( isIVA )
 					{
-						case LightStates.Exhaust:
-							this.lightStacks[i].Item1.color = this.exhaustColor; // when restarting an engine
-							this.lightStacks[i].Item2.color = this.exhaustColor; // when restarting an engine
-							this.SetIntensityFromExhaust( throttle, i );
-							
-							if( isIVA )
-							{
-								this.lightStacks[i].Item1.intensity *= this.multiplierOnIva;
-								this.lightStacks[i].Item2.intensity *= this.multiplierOnIva;
-							}
-							break;
-
-						case LightStates.Disabled:
-							this.lightStacks[i].Item1.enabled = false;
-							this.lightStacks[i].Item2.enabled = false;
-
-							break;
+						this.lightStacks[i].Item1.intensity *= IVA_MULTIPLIER;
+						this.lightStacks[i].Item2.intensity *= IVA_MULTIPLIER;
 					}
+					
 
 					//Prevents light from reaching the planet while in space
 					int mask = ~(1 << vessel.mainBody.scaledBody.layer);
@@ -346,26 +320,23 @@ namespace EngineLightRelit
 			}
 		}
 
-
-		// the part of me that values readability wants these functions out here, the part of me concerned
-		// with performance wants to find a way to inline them - neatness wins for today
-
 		protected void SetIntensityFromExhaust( float throttle, int i )
 		{
 			//this is how we keep the maths to a minimum
 			jitteredThrottle = throttle + jitterBuffer.GetAverage() * jitterMultiplier; // per-frame jitter was annoying, now it's smoothed
 
-			float intensity = lightPower * jitteredThrottle * jitteredThrottle * this.multiTransformIntensityMult; // exponential increase in intensity with throttle
+			float intensity = lightIntensity * (jitteredThrottle * jitteredThrottle) * this.multiTransformIntensityMult; // exponential increase in intensity with throttle
 
 			this.lightStacks[i].Item1.intensity = intensity * NOZZLE_LIGHT_INTENSITY_MULTIPLIER;
 			this.lightStacks[i].Item2.intensity = intensity * AREA_LIGHT_INTENSITY_MULTIPLIER;
 
-			float range = lightRange * jitteredThrottle; // linear increase in range with throttle
+			float jitteredRange = lightRange * jitteredThrottle; // linear increase in range with throttle
 
-			this.lightStacks[i].Item1.range = range * NOZZLE_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
-			this.lightStacks[i].Item2.range = range * AREA_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
+			this.lightStacks[i].Item1.range = jitteredRange * NOZZLE_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
+			this.lightStacks[i].Item2.range = jitteredRange * AREA_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
 		}
 
+		// Disabled, but keep this here for now, might be helpful in the future.
 		/*protected void SetIntensityFromEmissive( int i )
 		{
 			// harder maths than the main engine light (ironically?)

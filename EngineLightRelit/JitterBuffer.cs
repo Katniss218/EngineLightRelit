@@ -1,7 +1,7 @@
 ﻿namespace EngineLightRelit
 {
 	/// <summary>
-	/// A little single-purpose circular buffer to perform a rolling average on random values
+	/// A little single-purpose circular buffer to perform a rolling average on random values.
 	/// </summary>
 	internal class JitterBuffer
 	{

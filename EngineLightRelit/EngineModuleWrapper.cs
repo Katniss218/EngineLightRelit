@@ -5,7 +5,7 @@ using UnityEngine;
 namespace EngineLightRelit
 {
 	/// <summary>
-	/// Cater for rapier / multimode engines
+	/// Legacy thing, but still helpful.
 	/// </summary>
 	internal class EngineModuleWrapper
 	{
@@ -32,22 +32,6 @@ namespace EngineLightRelit
 					throw new Exception( "could not locate an engine on part: " + part.name );
 				}
 			}
-
-			/*this.hasEmissive = false;
-			try
-			{
-				// should pretty reliably test that we can read from the emissive
-				this.engineEmissiveModule = part.FindModuleImplementing<FXModuleAnimateThrottle>();
-				float emissive = 1 + this.engineEmissiveModule.animState; // should throw nullref on no emissive
-				if( emissive >= 1 )
-				{
-					this.hasEmissive = true;
-				}
-			}
-			catch( Exception )
-			{
-				// nothing to do - no emissive isn't a big deal really 
-			}*/
 		}
 
 		public float GetThrottle()
@@ -68,15 +52,6 @@ namespace EngineLightRelit
 				return throttle;
 			}
 		}
-
-		/*public float getEmissive()
-		{
-			if( this.hasEmissive )
-			{
-				return this.engineEmissiveModule.animState;
-			}
-			return 0f;
-		}*/
 
 		public float GetMaxThrust( bool fromEnabledModulesOnly = false )
 		{

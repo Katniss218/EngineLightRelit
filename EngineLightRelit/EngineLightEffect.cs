@@ -6,31 +6,21 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
 
-/*
- *          [KSP] Engine Light Mod 
- *          Made by Tatjam (Tajampi)  
- *                TajamSoft
- *         ---------------------------
- *               Contributors: 
- *                Saabstory88
- *            SpaceTiger (aka Xarun)
- *				ToXik-yogHurt (code refactoring asshole)
- *			
- *--------------------------------------------------
- *
- * Notes:
- *      
- *  I'm implementing my own light, to make sure I don't break anything
- * 
- * 
- * Todo:
- * 
- * Give nuclear engines some temperature-dependant light emission?
- * Runtime modification of light colours & locations:
- *		to make configs for new engines easier to make
- * 
+ *   Original author:
+ *   - Tatjam (Tajampi)
+ *   Original contributors:
+ *   - Saabstory88
+ *   - SpaceTiger (aka Xarun)
+ *   - ToXik-yogHurt (code refactoring asshole)
+ *   
+ *########################################################################################
+ *   
+ *   EngineLightKatnissified mod for KSP RSS/RO
+ *   
+ *   Adapted for RSS/RO by Katniss (Katniss218)
+ *   
+ *########################################################################################
  */
 
 using System;
@@ -46,8 +36,10 @@ namespace EngineLightRelit
 		public const float LIGHT_LINEAR = 0.0068f;
 		public const float LIGHT_MINIMUM = 0.1304f;
 
-		public const float SPOT_LIGHT_RANGE_MULTIPLIER = 1.25f;
-		public const float POINT_LIGHT_RANGE_MULTIPLIER = 0.75f;
+		public const float NOZZLE_LIGHT_RANGE_MULTIPLIER = 0.75f;
+		public const float AREA_LIGHT_RANGE_MULTIPLIER = 1.25f;
+		public const float NOZZLE_LIGHT_INTENSITY_MULTIPLIER = 1.15f;
+		public const float AREA_LIGHT_INTENSITY_MULTIPLIER = 1f;
 
 		// Variables:
 
@@ -57,6 +49,8 @@ namespace EngineLightRelit
 		[KSPField] public float lightPower = 1.0f;
 
 		[KSPField] public float lightRange = 9f;
+
+		[KSPField] public float plumeLength = 20f;
 
 		[KSPField] public float exhaustRed = 1.0f;
 
@@ -123,9 +117,10 @@ namespace EngineLightRelit
 		{
 			// spawn 2 lights, one point (top) and one spot (top-ish, pointing down)
 
-			// light1
-
-			GameObject gameObject1 = new GameObject( "_EngineLight" );
+			// light1 - nozzle light
+			// this exists so the light is stretched vertically, and it also illuminates the rocket better.
+			
+			GameObject gameObject1 = new GameObject( "_EngineLight_Nozzle" );
 
 			Light light1 = gameObject1.AddComponent<Light>();
 			light1.enabled = false;
@@ -141,12 +136,14 @@ namespace EngineLightRelit
 			gameObject1.transform.position = position;
 			gameObject1.transform.Translate( new Vector3( 0, 0, exhaustOffsetZ ), Space.Self );
 
-			// light2
+			// light2 - area (big) light
 
-			GameObject gameObject2 = new GameObject( "_EngineLight" );
+			GameObject gameObject2 = new GameObject( "_EngineLight_Area" );
 
 			Light light2 = gameObject2.AddComponent<Light>();
 			light2.enabled = false;
+			light2.shadows = LightShadows.Hard;
+			light2.shadowStrength = 1;
 
 			// Light Settings
 			light2.type = LightType.Point;
@@ -156,7 +153,8 @@ namespace EngineLightRelit
 			gameObject2.transform.parent = this.engine.transform;
 			gameObject2.transform.forward = thrustTransformForward;
 			gameObject2.transform.position = position;
-			gameObject2.transform.Translate( new Vector3( 0, 0, exhaustOffsetZ + (this.lightRange * 0.25f) ), Space.Self );
+			// Move our area light down a bit compared to the nozzle light
+			gameObject2.transform.Translate( new Vector3( 0, 0, exhaustOffsetZ + (this.plumeLength * 0.25f) ), Space.Self );
 
 #if DEBUG
 			Utils.Log( gameObject1.transform.position.ToString() );
@@ -181,10 +179,10 @@ namespace EngineLightRelit
 				float maxThrust = engine.GetMaxThrust();
 
 				// calculate light power from engine max thrust - follows a quadratic:
-				this.lightPower = ((LIGHT_CURVE * maxThrust * maxThrust)
-							+ (LIGHT_LINEAR * maxThrust)
-							+ LIGHT_MINIMUM)
-							* lightPower; // use the multiplier read from config file
+				//this.lightPower = ((LIGHT_CURVE * maxThrust * maxThrust)
+				//			+ (LIGHT_LINEAR * maxThrust)
+				//			+ LIGHT_MINIMUM)
+				//			* this.lightPower; // use the multiplier read from config file
 
 
 
@@ -359,13 +357,13 @@ namespace EngineLightRelit
 
 			float intensity = lightPower * jitteredThrottle * jitteredThrottle * this.multiTransformIntensityMult; // exponential increase in intensity with throttle
 
-			this.lightStacks[i].Item1.intensity = intensity;
-			this.lightStacks[i].Item2.intensity = intensity;
+			this.lightStacks[i].Item1.intensity = intensity * NOZZLE_LIGHT_INTENSITY_MULTIPLIER;
+			this.lightStacks[i].Item2.intensity = intensity * AREA_LIGHT_INTENSITY_MULTIPLIER;
 
 			float range = lightRange * jitteredThrottle; // linear increase in range with throttle
 
-			this.lightStacks[i].Item1.range = range * SPOT_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
-			this.lightStacks[i].Item2.range = range * POINT_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
+			this.lightStacks[i].Item1.range = range * NOZZLE_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
+			this.lightStacks[i].Item2.range = range * AREA_LIGHT_RANGE_MULTIPLIER; // linear increase in range with throttle
 		}
 
 		/*protected void SetIntensityFromEmissive( int i )

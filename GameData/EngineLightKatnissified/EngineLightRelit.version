@@ -1,0 +1,16 @@
+{
+  "NAME": "Engine Lighting Relit",
+  "URL": "http://ksp.spacetux.net/avc/EngineLightRelit",
+  "DOWNLOAD": "https://spacedock.info/mod/2111/Engine%20Lighting%20Relit",
+  "VERSION": {
+    "MAJOR": 1,
+    "MINOR": 6,
+    "PATCH": 2,
+    "BUILD": 0
+  },
+  "KSP_VERSION_MIN": {
+    "MAJOR": 1,
+    "MINOR": 8,
+    "PATCH": 0
+  }
+}

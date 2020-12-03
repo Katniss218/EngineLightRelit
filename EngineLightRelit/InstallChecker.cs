@@ -40,8 +40,8 @@ namespace EngineLightRelit
 	[KSPAddon( KSPAddon.Startup.MainMenu, true )]
 	internal class InstallChecker : MonoBehaviour
 	{
-		internal const string MODNAME = "Engine Light Relit";
-		internal const string FOLDERNAME = "EngineLightRelit";
+		internal const string MODNAME = "Engine Light Katnissified";
+		internal const string FOLDERNAME = "EngineLightKatnissified";
 		internal const string EXPECTEDPATH = FOLDERNAME + "/Plugins";
 
 		protected void Start()
